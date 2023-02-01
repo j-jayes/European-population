@@ -1,0 +1,70 @@
+---
+title: "Cleaning"
+format: html
+---
+
+```{r}
+library(tidyverse)
+library(sf)
+```
+
+```{r}
+df <- read_csv2("European-population/European-urban-population_nuts_2.csv")
+```
+
+```{r}
+df
+```
+
+```{r}
+map <- read_rds("European-population/map_simple.rds")
+```
+
+Planning
+
+Basemap to show population change
+
+Points to show city locations.
+
+```{r}
+# filters
+
+points_to_plot <- df %>% 
+  filter(year == 2000) %>% 
+  st_as_sf(.,
+  coords = c("longitude_in_degrees", "latitude_in_degrees"),
+  crs = 4326
+) %>% 
+  mutate(inhabitants = 1000 * inhabitants_in_000_s)
+
+polygons_to_plot <- points_to_plot %>% 
+  distinct(nuts_code, total_pop) %>% 
+  mutate(nuts_code = str_remove(nuts_code, "\\'")) %>% 
+  inner_join(map)
+
+theme_set(theme_light())
+
+ggplot() +
+  # basemap
+  geom_sf(data = map, aes(geometry = geometry), fill = "grey80") +
+  # polygons
+  geom_sf(data = polygons_to_plot, aes(fill = total_pop, geometry = geometry)) +
+  # points
+  geom_sf(data = points_to_plot, aes(colour = country, geometry = geometry, size = inhabitants)) +
+  scale_fill_viridis_c(labels = scales::number_format()) +
+  scale_size_continuous(labels = scales::number_format()) +
+  labs(
+    fill = "Total Population",
+    size = "Number of city inhabitants",
+    colour = "Country"
+  )
+
+```
+
+Largest cities per year, largest regions per year, largest country.
+
+```{r}
+points_to_plot %>% 
+  ggplot(aes())
+```
+
