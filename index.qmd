@@ -13,7 +13,7 @@ Link download of European Urban Population data on NUTS 2 level and provide a fe
 
 ### Download link
 
-Here is a link to download the [Excel file](NUTS_2_populations_by_european_cities.xlsx) containing the urban population at NUTS 2 region by year.
+Here is a link to download the [Excel file](NUTS_2_populations_by_european_cities_2.xlsx) containing the urban population at NUTS 2 region by year.
 
 ### Concerns
 
