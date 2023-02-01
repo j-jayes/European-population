@@ -1,0 +1,129 @@
+---
+title: "European Urban Populatons"
+format: html
+execute: 
+  echo: false
+  message: false
+  warning: false
+---
+
+## Purpose
+
+Link download of European Urban Population data on NUTS 2 level and provide a few descriptive maps.
+
+### Download link
+
+Here is a link to download the [Excel file](NUTS_2_populations_by_european_cities.xlsx) containing the urban population at NUTS 2 region by year.
+
+### Concerns
+
+I am worried that in the early years, some cities appear to be missing. For example, in 100 we only see population estimates for Spain and Italy.
+
+## Maps and plots
+
+Below we show a map of the locations and sizes of cities, as well as the population by NUTS 2 region. Click on a tab to see the map and largest cities in that year.
+
+```{r}
+library(tidyverse)
+library(sf)
+theme_set(theme_light())
+
+df <- read_csv2("European-population/European-urban-population_nuts_2.csv")
+map <- read_rds("European-population/map_simple.rds")
+```
+
+
+```{r}
+plot_map <- function(year_in) {
+  points_to_plot <- df %>%
+    filter(year == year_in) %>%
+    st_as_sf(.,
+      coords = c("longitude_in_degrees", "latitude_in_degrees"),
+      crs = 4326
+    ) %>%
+    mutate(inhabitants = 1000 * inhabitants_in_000_s)
+
+  polygons_to_plot <- points_to_plot %>%
+    distinct(nuts_code, total_pop) %>%
+    mutate(nuts_code = str_remove(nuts_code, "\\'")) %>%
+    inner_join(map)
+
+  map <- ggplot() +
+    # basemap
+    geom_sf(data = map, aes(geometry = geometry), fill = "grey80") +
+    # polygons
+    geom_sf(data = polygons_to_plot, aes(fill = total_pop, geometry = geometry)) +
+    # points
+    geom_sf(data = points_to_plot, aes(colour = country, geometry = geometry, size = inhabitants), alpha = .5) +
+    scale_fill_viridis_c(labels = scales::number_format()) +
+    scale_size_continuous(labels = scales::number_format()) +
+    coord_sf(xlim = c(-15, 30), ylim = c(36, 70)) +
+    labs(
+      fill = "Total Population",
+      size = "Number of city inhabitants",
+      colour = "Country"
+    )
+  
+  return(map)
+}
+
+plot_cities <- function(year_in) {
+  points_to_plot <- df %>%
+    filter(year == year_in) %>%
+    st_as_sf(.,
+      coords = c("longitude_in_degrees", "latitude_in_degrees"),
+      crs = 4326
+    ) %>%
+    mutate(inhabitants = 1000 * inhabitants_in_000_s)
+
+
+  points_to_plot %>%
+    slice_max(inhabitants, n = 15) %>%
+    mutate(
+      name = str_c(city, " - ", country),
+      name = fct_reorder(name, inhabitants)
+    ) %>%
+    ggplot(aes(inhabitants, name, fill = country)) +
+    scale_fill_brewer(palette = "Paired") +
+    geom_col(show.legend = F) +
+    scale_x_continuous(labels = scales::number_format()) +
+    labs(x = "Number of inhabitants", y = "City", title = str_c("Largest 15 cities in ", year_in))
+}
+
+```
+
+```{r}
+make_tab <- function(year_in) { # function to make the tabs
+  cat("##", as.character(year_in)) # Label tab
+  cat("\n") # Close tab
+  p <- plot_map(year_in) 
+  print(p) # Display plot
+  cat("\n") # Close tab
+  q <- plot_cities(year_in) 
+  print(q) # Display plot
+  cat("\n") # Close tab
+}
+```
+
+:::: {.column-page}
+::: {.panel-tabset}
+
+```{r}
+#| results: asis
+#| fig-height: 8
+#| fig-width: 10
+
+years <- df %>% 
+  distinct(year) %>%
+  pull() %>% 
+  as.character()
+
+for (i in years){
+  
+  make_tab(i)
+}
+
+```
+
+:::
+::::

@@ -6,14 +6,12 @@ format: html
 ```{r}
 library(tidyverse)
 library(sf)
+theme_set(theme_light())
+
 ```
 
 ```{r}
 df <- read_csv2("European-population/European-urban-population_nuts_2.csv")
-```
-
-```{r}
-df
 ```
 
 ```{r}
@@ -42,7 +40,6 @@ polygons_to_plot <- points_to_plot %>%
   mutate(nuts_code = str_remove(nuts_code, "\\'")) %>% 
   inner_join(map)
 
-theme_set(theme_light())
 
 ggplot() +
   # basemap
@@ -50,9 +47,10 @@ ggplot() +
   # polygons
   geom_sf(data = polygons_to_plot, aes(fill = total_pop, geometry = geometry)) +
   # points
-  geom_sf(data = points_to_plot, aes(colour = country, geometry = geometry, size = inhabitants)) +
+  geom_sf(data = points_to_plot, aes(colour = country, geometry = geometry, size = inhabitants), alpha = .5) +
   scale_fill_viridis_c(labels = scales::number_format()) +
   scale_size_continuous(labels = scales::number_format()) +
+  coord_sf(xlim = c(-15, 30), ylim = c(36, 70)) +
   labs(
     fill = "Total Population",
     size = "Number of city inhabitants",
@@ -64,7 +62,37 @@ ggplot() +
 Largest cities per year, largest regions per year, largest country.
 
 ```{r}
-points_to_plot %>% 
-  ggplot(aes())
+year_in <- points_to_plot %>% 
+  distinct(year) %>% 
+  pull()
+
+points_to_plot %>%
+  slice_max(inhabitants, n = 15) %>%
+  mutate(
+    name = str_c(city, " - ", country),
+    name = fct_reorder(name, inhabitants)
+  ) %>%
+  ggplot(aes(inhabitants, name, fill = country)) +
+  scale_fill_brewer(palette = "Paired") +
+  geom_col(show.legend = F) +
+  scale_x_continuous(labels = scales::number_format()) +
+  labs(x = "Number of inhabitants", y = "City", title = str_c("Largest 15 cities in ", year_in))
+
+
+year_in <- points_to_plot %>% 
+  distinct(year) %>% 
+  pull()
+
+points_to_plot %>%
+  group_by(country) %>%
+  summarise(country_total_pop = sum(inhabitants, na.rm = T)) %>%
+  ungroup() %>%
+  slice_max(country_total_pop, n = 15) %>%
+  mutate(country = fct_reorder(country, country_total_pop)) %>%
+  ggplot(aes(country_total_pop, country, fill = country)) +
+  geom_col(show.legend = F) +
+  scale_x_continuous(labels = scales::number_format()) +
+  labs(x = "Number of urban inhabitants", y = "Country", title = str_c("Largest 15 countries by urban popultion in ", year_in))
+
 ```
 
